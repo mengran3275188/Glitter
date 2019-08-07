@@ -15,4 +15,5 @@ public:
 
 private:
 	std::vector<GameObject*> mGameObjects;
+	std::vector<GameObject*> mLights;
 };

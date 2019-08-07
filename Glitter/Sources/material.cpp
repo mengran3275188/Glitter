@@ -52,6 +52,29 @@ void Material::Activate(Camera &camera)
 	glUniformMatrix4fv(glGetUniformLocation(mShader->get(), "view"), 1, GL_FALSE, glm::value_ptr(view));
 	glUniformMatrix4fv(glGetUniformLocation(mShader->get(), "projection"), 1, GL_FALSE, glm::value_ptr(projection));
 
+	glUniform3f(glGetUniformLocation(mShader->get(), "dirLight.direction"), -0.2f, -1.0f, -0.3f);
+	glUniform3f(glGetUniformLocation(mShader->get(), "dirLight.ambient"), 0.55f, 0.55f, 0.55f);
+	glUniform3f(glGetUniformLocation(mShader->get(), "dirLight.diffuse"), 0.4f, 0.4f, 0.4f);
+	glUniform3f(glGetUniformLocation(mShader->get(), "dirLight.specular"), 0.5f, 0.5f, 0.5f);
+
+	GLint viewPosLoc = glGetUniformLocation(mShader->get(), "viewPos");
+	glUniform3f(viewPosLoc, camera.Position.x, camera.Position.y, camera.Position.z);
+
+	unsigned int unit = 0, diffuse = 0, specular = 0;
+	/*
+	for (auto &i : mTextures)
+	{   // Set Correct Uniform Names Using Texture Type (Omit ID for 0th Texture)
+		std::string uniform = i.second;
+		if (i.second == "diffuse")  uniform += (diffuse++ > 0) ? std::to_string(diffuse) : "";
+		else if (i.second == "specular") uniform += (specular++ > 0) ? std::to_string(specular) : "";
+
+		// Bind Correct Textures and Vertex Array Before Drawing
+		glActiveTexture(GL_TEXTURE0 + unit);
+		glBindTexture(GL_TEXTURE_2D, i.first);
+		//glUniform1f(glGetUniformLocation(mShader->get(), ("material." + uniform).c_str()), ++unit);
+		//glUniform1f(glGetUniformLocation(mShader->get(), "material.diffuse"), 0);
+	}
+	*/
 }
 
 GLuint Material::GetShader() const
