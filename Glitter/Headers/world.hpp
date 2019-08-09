@@ -2,6 +2,7 @@
 
 // Standard Headers
 #include <vector>
+#include "shader.hpp";
 
 // Local Headers
 #include "gameobject.hpp"
@@ -14,6 +15,14 @@ public:
 	void Render(Camera camera);
 
 private:
+	GLuint LoadCubemap(std::vector<std::string> faces);
+	void DrawSkybox(Camera camera);
+
 	std::vector<GameObject*> mGameObjects;
 	std::vector<GameObject*> mLights;
+
+	GLuint mSkyboxVAO;
+	GLuint mSkyboxTexture;
+	Dai::Shader *mSkyboxShader;
+	Dai::Shader *mPbrShader;
 };

@@ -1,6 +1,7 @@
 #pragma once
 
-#include <map>
+#include <unordered_map>
+#include <vector>
 
 #include "shader.hpp"
 #include "camera.hpp"
@@ -8,12 +9,13 @@
 class Material
 {
 public:
-	Material(Dai::Shader *shader, std::map<std::string, std::string> const &textures);
+	Material(Dai::Shader *shader, std::vector<std::pair<std::string, std::string>> const &textures);
 
 	void Activate(Camera &camera);
 	GLuint GetShader() const;
 
 private:
+
 	Dai::Shader* mShader;
-	std::map<GLuint, std::string> mTextures;
+	std::vector<std::pair<GLuint, std::string>> mTextures;
 };
