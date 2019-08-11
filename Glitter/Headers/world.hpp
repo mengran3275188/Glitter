@@ -17,6 +17,7 @@ public:
 private:
 	GLuint LoadCubemap(std::vector<std::string> faces);
 	void DrawSkybox(Camera camera);
+	void RenderSphere();
 
 	std::vector<GameObject*> mGameObjects;
 	std::vector<GameObject*> mLights;

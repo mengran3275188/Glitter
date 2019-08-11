@@ -18,6 +18,7 @@
 // Function prototypes
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void Do_Movement();
 
@@ -39,8 +40,8 @@ int main(int argc, char * argv[]) {
 
 	// Load GLFW and Create a Window
 	glfwInit();
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
@@ -54,6 +55,7 @@ int main(int argc, char * argv[]) {
 	}
 
 	glfwSetKeyCallback(mWindow, key_callback);
+	glfwSetMouseButtonCallback(mWindow, mouse_button_callback);
 	glfwSetCursorPosCallback(mWindow, mouse_callback);
 	glfwSetScrollCallback(mWindow, scroll_callback);
 
@@ -123,6 +125,17 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	}
 }
 
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+{
+	if (button >= 0 && button < 1024)
+	{
+		if (action == GLFW_PRESS)
+			keys[button] = true;
+		else if (action == GLFW_RELEASE)
+			keys[button] = false;
+	}
+}
+
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
 	if (firstMouse)
@@ -138,7 +151,10 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 	lastX = xpos;
 	lastY = ypos;
 
-	camera.ProcessMouseMovement(xoffset, yoffset);
+	if (keys[GLFW_MOUSE_BUTTON_RIGHT])
+	{
+		camera.ProcessMouseMovement(xoffset, yoffset);
+	}
 }
 
 

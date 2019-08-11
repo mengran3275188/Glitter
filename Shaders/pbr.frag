@@ -81,11 +81,11 @@ vec3 fresnelSchlick(float cosTheta, vec3 F0)
 }
 // ----------------------------------------------------------------------------
 void main()
-{
+{		
     vec3 albedo     = pow(texture(albedoMap, TexCoords).rgb, vec3(2.2));
-    float metallic  = pow(texture(metallicMap, TexCoords).r, 2.2);
-    float roughness = pow(texture(roughnessMap, TexCoords).r, 2.2);
-    float ao        = pow(texture(aoMap, TexCoords).r, 2.2);
+    float metallic  = texture(metallicMap, TexCoords).r;
+    float roughness = texture(roughnessMap, TexCoords).r;
+    float ao        = texture(aoMap, TexCoords).r;
     vec3 N = getNormalFromMap();
     vec3 V = normalize(camPos - WorldPos);
 
@@ -123,7 +123,7 @@ void main()
         // multiply kD by the inverse metalness such that only non-metals 
         // have diffuse lighting, or a linear blend if partly metal (pure metals
         // have no diffuse light).
-        kD *= 1.0 - metallic;     
+        kD *= 1.0 - metallic;	  
 
         // scale light by NdotL
         float NdotL = max(dot(N, L), 0.0);        
@@ -144,4 +144,5 @@ void main()
     color = pow(color, vec3(1.0/2.2)); 
 
     FragColor = vec4(color, 1.0);
+    //FragColor = texture(metallicMap, TexCoords);
 }
