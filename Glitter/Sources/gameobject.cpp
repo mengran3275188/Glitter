@@ -5,8 +5,13 @@ GameObject::GameObject(Dai::Mesh* mesh, Material* material) : mMesh(mesh), mMate
 {
 }
 
+void GameObject::SetIrradiance(GLuint texture)
+{
+	mIrradianceTexture = texture;
+}
+
 void GameObject::Render(Camera &camera)
 {
-	mMaterial->Activate(camera);
+	mMaterial->Activate(camera, mIrradianceTexture);
 	mMesh->draw(mMaterial->GetShader());
 }

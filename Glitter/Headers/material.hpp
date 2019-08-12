@@ -11,7 +11,7 @@ class Material
 public:
 	Material(Dai::Shader *shader, std::vector<std::pair<std::string, std::string>> const &textures);
 
-	void Activate(Camera &camera);
+	void Activate(Camera &camera, GLuint irradianceTexture);
 	GLuint GetShader() const;
 
 	void SetBool(const std::string &name, bool value) const;

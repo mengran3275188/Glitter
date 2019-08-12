@@ -26,7 +26,7 @@ void Do_Movement();
 World world;
 
 // Camera
-Camera camera(glm::vec3(0.0f, 0.0f, 6.0f));
+Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 bool keys[1024];
 GLfloat lastX = 400, lastY = 300;
 bool firstMouse = true;
@@ -66,11 +66,13 @@ int main(int argc, char * argv[]) {
 	gladLoadGL();
 	fprintf(stderr, "OpenGL %s\n", glGetString(GL_VERSION));
 
-	glViewport(0, 0, mWidth, mHeight);
 	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
 
 	world.Init();
+	//world.CaptureCubemap();
     // Rendering Loop
+	glViewport(0, 0, mWidth, mHeight);
     while (glfwWindowShouldClose(mWindow) == false) {
         if (glfwGetKey(mWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(mWindow, true);
@@ -156,7 +158,6 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 		camera.ProcessMouseMovement(xoffset, yoffset);
 	}
 }
-
 
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {

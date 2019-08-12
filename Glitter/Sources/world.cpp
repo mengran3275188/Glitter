@@ -7,6 +7,8 @@
 
 void World::Init()
 {
+	//stbi_set_flip_vertically_on_load(true);
+
 	GLfloat skyboxVertices[] = {
 		-1.0f,  1.0f, -1.0f,
 		-1.0f, -1.0f, -1.0f,
@@ -60,18 +62,28 @@ void World::Init()
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0);
 
-	/*
-	mSkyboxTexture = LoadCubemap({ "/Resource/Textures/skybox/right.jpg", "/Resource/Textures/skybox/left.jpg",
-				 "/Resource/Textures/skybox/top.jpg", "/Resource/Textures/skybox/bottom.jpg",
-				 "/Resource/Textures/skybox/front.jpg", "/Resource/Textures/skybox/back.jpg",
+
+	mSkyboxTexture = LoadCubemap({ "/Resource/Textures/skybox/newport_loft/right.png", "/Resource/Textures/skybox/newport_loft/left.png",
+				 "/Resource/Textures/skybox/newport_loft/top.png", "/Resource/Textures/skybox/newport_loft/bottom.png",
+				 "/Resource/Textures/skybox/newport_loft/front.png", "/Resource/Textures/skybox/newport_loft/back.png",
 		});
+	mIrradianceTexture = LoadCubemap({ "/Resource/Textures/irradiance/right.png",
+									   "/Resource/Textures/irradiance/left.png",
+									   "/Resource/Textures/irradiance/top.png",
+									   "/Resource/Textures/irradiance/bottom.png",
+									   "/Resource/Textures/irradiance/front.png",
+									   "/Resource/Textures/irradiance/back.png", });
 
 
 	mSkyboxShader = new Dai::Shader();
 	mSkyboxShader->attach("skybox.vert");
 	mSkyboxShader->attach("skybox.frag");
 	mSkyboxShader->link();
-	*/
+
+	mBackgroundShader = new Dai::Shader();
+	mBackgroundShader->attach("background.vert");
+	mBackgroundShader->attach("background.frag");
+	mBackgroundShader->link();
 
 	mPbrShader = new Dai::Shader();
 	mPbrShader->attach("pbr.vert");
@@ -99,19 +111,20 @@ void World::Init()
 		{"aoMap", "/Resource/Textures/metal_tiles_01/2K/AO.png"},
 		});
 	GameObject *MyGameobject = new GameObject(MyMesh, MyMaterial);
+	//MyGameobject->SetIrradiance(mIrradianceTexture);
+	MyGameobject->SetIrradiance(mSkyboxTexture);
 	mGameObjects.push_back(MyGameobject);
 }
 
 void World::Render(Camera camera)
 {
-
 	for each (GameObject* obj in mGameObjects)
 	{
 		obj->Render(camera);
 	}
 
 	glDepthFunc(GL_LEQUAL);
-	//DrawSkybox(camera);
+	DrawSkybox(camera);
 	glDepthFunc(GL_LESS);
 
 }
@@ -129,7 +142,7 @@ GLuint World::LoadCubemap(std::vector<std::string> faces)
 		if (data)
 		{
 			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
-				0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+				0, GL_RGB, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 			stbi_image_free(data);
 		}
 		else {
@@ -147,21 +160,125 @@ GLuint World::LoadCubemap(std::vector<std::string> faces)
 	return texture;
 }
 
+GLuint World::LoadHDR(std::string filepath)
+{
+	int width, height, nrComponents;
+	float *data = stbi_loadf((PROJECT_SOURCE_DIR + filepath).c_str(), &width, &height, &nrComponents, 0);
+	GLuint hdrTexture;
+	if (data)
+	{
+		glGenTextures(1, &hdrTexture);
+		glBindTexture(GL_TEXTURE_2D, hdrTexture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, data);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		stbi_image_free(data);
+	}
+	else {
+		std::cout << "Faild to load HDR image." << std::endl;
+	}
+	return hdrTexture;
+}
+
+void World::CaptureCubemap()
+{
+	unsigned int captureFBO;
+	unsigned int captureRBO;
+	glGenFramebuffers(1, &captureFBO);
+	glGenRenderbuffers(1, &captureRBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+	glBindRenderbuffer(GL_RENDERBUFFER, captureRBO);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, 2048, 2048);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, captureRBO);
+
+	mHdrTexture = LoadHDR("/Resource/Textures/skybox/Newport_Loft_Ref.hdr");
+	mEquirectangularToCubemapShader = new Dai::Shader();
+	mEquirectangularToCubemapShader->attach("cubemap.vert");
+	mEquirectangularToCubemapShader->attach("equirectangular_to_cubemap.frag");
+	mEquirectangularToCubemapShader->link();
+
+	glGenTextures(1, &mEnvCubeMap);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, mEnvCubeMap);
+	for (unsigned int i = 0; i < 6; ++i)
+	{
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB16F, 2048, 2048, 0, GL_RGB, GL_FLOAT, nullptr);
+	}
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+
+	glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+	glm::mat4 captureViews[] =
+	{
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  1.0f,  0.0f), glm::vec3(0.0f,  0.0f,  1.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, -1.0f,  0.0f), glm::vec3(0.0f,  0.0f, -1.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f,  1.0f), glm::vec3(0.0f, -1.0f,  0.0f)),
+		glm::lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))
+	};
+
+	mEquirectangularToCubemapShader->activate();
+	glUniform1i(glGetUniformLocation(mEquirectangularToCubemapShader->get(), "equirectangularMap"), 0);
+	glUniformMatrix4fv(glGetUniformLocation(mEquirectangularToCubemapShader->get(), "projection"), 1, GL_FALSE, glm::value_ptr(captureProjection));
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, mHdrTexture);
+
+	glViewport(0, 0, 2048, 2048);
+	glBindFramebuffer(GL_FRAMEBUFFER, captureFBO);
+	for (unsigned int i = 0; i < 6; ++i)
+	{
+		glUniformMatrix4fv(glGetUniformLocation(mEquirectangularToCubemapShader->get(), "view"), 1, GL_FALSE, glm::value_ptr(captureViews[i]));
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, mEnvCubeMap, 0);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		RenderCube();
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
 void World::DrawSkybox(Camera camera)
 {
+	mBackgroundShader->activate();
+
+	//glm::mat4 view = glm::mat4(glm::mat3(camera.GetViewMatrix()));
+	glm::mat4 projection = camera.GetProjectionMatrix();
+	glm::mat4 view = camera.GetViewMatrix();
+
+	glUniformMatrix4fv(glGetUniformLocation(mBackgroundShader->get(), "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+	glUniformMatrix4fv(glGetUniformLocation(mBackgroundShader->get(), "view"), 1, GL_FALSE, glm::value_ptr(view));
+
+	glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_CUBE_MAP, mEnvCubeMap); 
+	glBindTexture(GL_TEXTURE_CUBE_MAP, mSkyboxTexture); 
+	glUniform1i(glGetUniformLocation(mBackgroundShader->get(), "environmentMap"), 0);
+	glBindVertexArray(mSkyboxVAO);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
+	/*
 	mSkyboxShader->activate();
 
 	glm::mat4 view = glm::mat4(glm::mat3(camera.GetViewMatrix()));
 	glm::mat4 projection = camera.GetProjectionMatrix();
 
-	glUniformMatrix4fv(glGetUniformLocation(mSkyboxShader->get(), "view"), 1, GL_FALSE, glm::value_ptr(view));
 	glUniformMatrix4fv(glGetUniformLocation(mSkyboxShader->get(), "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+	glUniformMatrix4fv(glGetUniformLocation(mSkyboxShader->get(), "view"), 1, GL_FALSE, glm::value_ptr(view));
 
-	glBindVertexArray(mSkyboxVAO);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, mSkyboxTexture);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, mSkyboxTexture); 
+	//glBindTexture(GL_TEXTURE_CUBE_MAP, mSkyboxTexture); 
+	glUniform1i(glGetUniformLocation(mSkyboxShader->get(), "skybox"), 0);
+	glBindVertexArray(mSkyboxVAO);
 	glDrawArrays(GL_TRIANGLES, 0, 36);
 	glBindVertexArray(0);
+	*/
 }
 
 unsigned int sphereVAO = 0;
@@ -257,6 +374,76 @@ void World::RenderSphere()
 
 	glBindVertexArray(sphereVAO);
 	glDrawElements(GL_TRIANGLE_STRIP, indexCount, GL_UNSIGNED_INT, 0);
+}
+
+void World::RenderCube()
+{// initialize (if necessary)
+	if (mCubeVAO == 0)
+	{
+		float vertices[] = {
+			// back face
+			-1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
+			 1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f, // top-right
+			 1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 0.0f, // bottom-right         
+			 1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 1.0f, 1.0f, // top-right
+			-1.0f, -1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 0.0f, // bottom-left
+			-1.0f,  1.0f, -1.0f,  0.0f,  0.0f, -1.0f, 0.0f, 1.0f, // top-left
+			// front face
+			-1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, // bottom-left
+			 1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 0.0f, // bottom-right
+			 1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // top-right
+			 1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f, 1.0f, // top-right
+			-1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 1.0f, // top-left
+			-1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, 0.0f, // bottom-left
+			// left face
+			-1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-right
+			-1.0f,  1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // top-left
+			-1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-left
+			-1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-left
+			-1.0f, -1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // bottom-right
+			-1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-right
+			// right face
+			 1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
+			 1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
+			 1.0f,  1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 1.0f, // top-right         
+			 1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 1.0f, // bottom-right
+			 1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 1.0f, 0.0f, // top-left
+			 1.0f, -1.0f,  1.0f,  1.0f,  0.0f,  0.0f, 0.0f, 0.0f, // bottom-left     
+			// bottom face
+			-1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, // top-right
+			 1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 1.0f, // top-left
+			 1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f, // bottom-left
+			 1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 1.0f, 0.0f, // bottom-left
+			-1.0f, -1.0f,  1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 0.0f, // bottom-right
+			-1.0f, -1.0f, -1.0f,  0.0f, -1.0f,  0.0f, 0.0f, 1.0f, // top-right
+			// top face
+			-1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
+			 1.0f,  1.0f , 1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f, // bottom-right
+			 1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 1.0f, // top-right     
+			 1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 1.0f, 0.0f, // bottom-right
+			-1.0f,  1.0f, -1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 1.0f, // top-left
+			-1.0f,  1.0f,  1.0f,  0.0f,  1.0f,  0.0f, 0.0f, 0.0f  // bottom-left        
+		};
+		glGenVertexArrays(1, &mCubeVAO);
+		glGenBuffers(1, &mCubeVBO);
+		// fill buffer
+		glBindBuffer(GL_ARRAY_BUFFER, mCubeVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+		// link vertex attributes
+		glBindVertexArray(mCubeVAO);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+	}
+	// render Cube
+	glBindVertexArray(mCubeVAO);
+	glDrawArrays(GL_TRIANGLES, 0, 36);
+	glBindVertexArray(0);
 }
 
 

@@ -41,7 +41,7 @@ Material::Material(Dai::Shader *shader, std::vector<std::pair<std::string, std::
 	}
 }
 
-void Material::Activate(Camera &camera)
+void Material::Activate(Camera &camera, GLuint irradianceTexture)
 {
 	mShader->activate();
 
@@ -68,6 +68,11 @@ void Material::Activate(Camera &camera)
 		SetInt(uniform, unit);
 		unit++;
 	}
+	glActiveTexture(GL_TEXTURE0 + unit);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, irradianceTexture);
+	SetInt("irradianceMap", unit);
+	SetInt("reflectionMap", unit);
+
 	glm::vec3 lightPositions[] = {
 	 glm::vec3(0.0f, 0.0f, 10.0f),
 	};

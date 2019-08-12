@@ -10,10 +10,13 @@ class GameObject
 public:
 	GameObject(Dai::Mesh* mesh, Material* material);
 	void Render(Camera &camera);
+	void SetIrradiance(GLuint texture);
 private:
 
 	GameObject(GameObject const &) = delete;
 	GameObject& operator =(GameObject const &) = delete;
 	Dai::Mesh* mMesh;
 	Material* mMaterial;
+	GLuint mIrradianceTexture;
+
 };

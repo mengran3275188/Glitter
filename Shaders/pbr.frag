@@ -10,6 +10,8 @@ uniform sampler2D normalMap;
 uniform sampler2D metallicMap;
 uniform sampler2D roughnessMap;
 uniform sampler2D aoMap;
+uniform samplerCube irradianceMap;
+uniform samplerCube reflectionMap;
 
 // lights
 uniform vec3 lightPositions[4];
@@ -88,7 +90,7 @@ void main()
     float ao        = texture(aoMap, TexCoords).r;
     vec3 N = getNormalFromMap();
     vec3 V = normalize(camPos - WorldPos);
-
+    vec3 R = reflect(-V, N);
     // calculate reflectance at normal incidence; if dia-electric (like plastic) use F0 
     // of 0.04 and if it's a metal, use the albedo color as F0 (metallic workflow)    
     vec3 F0 = vec3(0.04); 
@@ -134,8 +136,12 @@ void main()
     
     // ambient lighting (note that the next IBL tutorial will replace 
     // this ambient lighting with environment lighting).
-    vec3 ambient = vec3(0.03) * albedo * ao;
-    
+    vec3 kS = fresnelSchlick(max(dot(N, V), 0.0), F0);
+    vec3 kD = 1.0 - kS;
+    vec3 irradiance = texture(irradianceMap, N).rgb;
+    vec3 diffuse = irradiance * albedo;
+    vec3 specular = texture(reflectionMap, R).rgb;
+    vec3 ambient = (kD * diffuse + specular) * ao;
     vec3 color = ambient + Lo;
 
     // HDR tonemapping
@@ -144,5 +150,4 @@ void main()
     color = pow(color, vec3(1.0/2.2)); 
 
     FragColor = vec4(color, 1.0);
-    //FragColor = texture(metallicMap, TexCoords);
 }
