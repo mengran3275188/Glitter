@@ -36,7 +36,7 @@ GLfloat lastFrame = 0.0f;
 
 const GLuint SCREEN_WIDTH = 800, SCREEN_HEIGHT = 600;
 
-int main(int argc, char * argv[]) {
+int main(int /*argc*/, char * /*argv*/[]) {
 
 	// Load GLFW and Create a Window
 	glfwInit();
@@ -78,7 +78,7 @@ int main(int argc, char * argv[]) {
             glfwSetWindowShouldClose(mWindow, true);
 
 		// Set frame time
-		GLfloat currentFrame = glfwGetTime();
+		GLfloat currentFrame = (GLfloat)glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
@@ -113,7 +113,7 @@ void Do_Movement()
 }
 
 // Is called whenever a key is pressed/released via GLFW
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
+void key_callback(GLFWwindow* window, int key, int /*scancode*/, int action, int /*mode*/)
 {
 	//cout << key << endl;
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
@@ -127,7 +127,7 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 	}
 }
 
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
+void mouse_button_callback(GLFWwindow* /*window*/, int button, int action, int /*mods*/)
 {
 	if (button >= 0 && button < 1024)
 	{
@@ -138,20 +138,20 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 	}
 }
 
-void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+void mouse_callback(GLFWwindow* /*window*/, double xpos, double ypos)
 {
 	if (firstMouse)
 	{
-		lastX = xpos;
-		lastY = ypos;
+		lastX = (GLfloat)xpos;
+		lastY = (GLfloat)ypos;
 		firstMouse = false;
 	}
 
-	GLfloat xoffset = xpos - lastX;
-	GLfloat yoffset = lastY - ypos;  // Reversed since y-coordinates go from bottom to left
+	GLfloat xoffset = (GLfloat)(xpos - lastX);
+	GLfloat yoffset = (GLfloat)(lastY - ypos);  // Reversed since y-coordinates go from bottom to left
 
-	lastX = xpos;
-	lastY = ypos;
+	lastX = (GLfloat)xpos;
+	lastY = (GLfloat)ypos;
 
 	if (keys[GLFW_MOUSE_BUTTON_RIGHT])
 	{
@@ -159,7 +159,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 	}
 }
 
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+void scroll_callback(GLFWwindow* /*window*/, double /*xoffset*/, double yoffset)
 {
-	camera.ProcessMouseScroll(yoffset);
+	camera.ProcessMouseScroll((GLfloat)yoffset);
 }

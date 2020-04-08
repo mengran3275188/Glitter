@@ -10,8 +10,26 @@ void GameObject::SetIrradiance(GLuint texture)
 	mIrradianceTexture = texture;
 }
 
-void GameObject::Render(Camera &camera)
+void GameObject::SetPos(glm::vec3 inPos)
 {
-	mMaterial->Activate(camera, mIrradianceTexture);
-	mMesh->draw(mMaterial->GetShader());
+	mPos = inPos;
+}
+
+void GameObject::SetScale(glm::vec3 inScale)
+{
+	mScale = inScale;
+}
+
+void GameObject::Render(Camera &camera, Material* overrideMat)
+{
+	if(overrideMat)
+	{
+		overrideMat->Activate(camera, mIrradianceTexture, mPos, mScale);
+		mMesh->draw(overrideMat->GetShader());
+	}
+	else
+	{
+		mMaterial->Activate(camera, mIrradianceTexture, mPos, mScale);
+		mMesh->draw(mMaterial->GetShader());
+	}
 }

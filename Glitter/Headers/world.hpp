@@ -2,7 +2,7 @@
 
 // Standard Headers
 #include <vector>
-#include "shader.hpp";
+#include "shader.hpp"
 
 // Local Headers
 #include "gameobject.hpp"

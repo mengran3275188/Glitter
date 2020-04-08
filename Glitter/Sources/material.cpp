@@ -41,14 +41,15 @@ Material::Material(Dai::Shader *shader, std::vector<std::pair<std::string, std::
 	}
 }
 
-void Material::Activate(Camera &camera, GLuint irradianceTexture)
+void Material::Activate(Camera& camera, GLuint irradianceTexture, glm::vec3 pos, glm::vec3 scale)
 {
 	mShader->activate();
 
 	glm::mat4 view = camera.GetViewMatrix();
 	glm::mat4 projection = camera.GetProjectionMatrix();
 	glm::mat4 model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(0, 0, 0));
+	model = glm::translate(model, pos);
+	model = glm::scale(model, scale);
 
 	SetMat4("model", model);
 	SetMat4("view", view);

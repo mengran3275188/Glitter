@@ -96,6 +96,8 @@ void World::Init()
 	MyShader->attach("test.frag");
 	MyShader->link();
 
+	Dai::Mesh* MyCubw = new Dai::Mesh("/Resource/Models/cube.obj");
+
 
 	/*
 	Material *MyMaterial = new Material(MyShader, { {"diffuse", "/Resource/Textures/metal_tiles_01/2K/Albedo.png"} });
@@ -113,7 +115,19 @@ void World::Init()
 	GameObject *MyGameobject = new GameObject(MyMesh, MyMaterial);
 	//MyGameobject->SetIrradiance(mIrradianceTexture);
 	MyGameobject->SetIrradiance(mSkyboxTexture);
-	mGameObjects.push_back(MyGameobject);
+	//mGameObjects.push_back(MyGameobject);
+
+	GameObject* MyCuboObject = new GameObject(MyCubw, MyMaterial);
+	MyCuboObject->SetIrradiance(mSkyboxTexture);
+	MyCuboObject->SetPos(glm::vec3(0.f, 2.f, 0.f));
+	MyCuboObject->SetScale(glm::vec3(1.f, 1.f, 1.f));
+	mGameObjects.push_back(MyCuboObject);
+
+	GameObject* MyPlaneObject = new GameObject(MyCubw, MyMaterial);
+	MyPlaneObject->SetIrradiance(mSkyboxTexture);
+	MyPlaneObject->SetPos(glm::vec3(0.f, 0.f, 0.f));
+	MyPlaneObject->SetScale(glm::vec3(10.f, 0.1f, 10.f));
+	mGameObjects.push_back(MyPlaneObject);
 }
 
 void World::Render(Camera camera)
